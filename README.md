@@ -1,4 +1,4 @@
-# Anilist-Notifications
+# Anilist-Following-Client
 Simple interfaz para notificaciones que implementa API GraphQL de [Anilist](https://anilist.co/) :shipit:
 
 
