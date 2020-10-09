@@ -1,5 +1,5 @@
-# Anilist-Following-Client
-Simple interfaz para notificaciones que implementa API GraphQL de [Anilist](https://anilist.co/) :shipit:
+# Anilist-Simple-Client
+Interfaz para notificaciones que implementa API GraphQL de [Anilist](https://anilist.co/) :shipit:
 
 
 ![AnilistLogo](https://avatars3.githubusercontent.com/u/18018524?s=200&v=4)
