@@ -57,11 +57,11 @@ query ($userid: Int) {
         anime{
           count
           episodesWatched
-
+          meanScore
+          minutesWatched
         }
       }
     	avatar {
-    	  large
     	  medium
     	}
     }
@@ -74,16 +74,15 @@ query ($userid: Int) {
 class AnilistaRequest():
     def __init__(self):
         self.listaSiguiendoElem=[]
+        self.listaSiguiendoOffSeason=[]
         self.datosUsr={}
         self.usrid=0
-        #self.actualizarLista()
-        #self.datosDeUsuario()
 
     def actualizar(self):
         with open('modules/data/user_data') as json_file:
             data = json.load(json_file)
             self.usrid=data['userId']
-        self.actualizarLista()
+        self.actualizarListas()
         self.datosDeUsuario()
 
     def datosDeUsuario(self):
@@ -93,6 +92,9 @@ class AnilistaRequest():
         response_json = json.loads(response.text)
         self.datosUsr['profileimg']=response_json['data']['User']['avatar']['medium']
         self.datosUsr['profilename']=response_json['data']['User']['name']
+        self.datosUsr['vistos']=response_json['data']['User']['statistics']['anime']['count']
+        self.datosUsr['episodios']=response_json['data']['User']['statistics']['anime']['episodesWatched']
+        self.datosUsr['dias']=round(response_json['data']['User']['statistics']['anime']['minutesWatched'] / 1440,1)
 
     def convertirtiempo(self,seconds):
         time = float(seconds)
@@ -103,10 +105,12 @@ class AnilistaRequest():
         minutes = time // 60
         time %= 60
         seconds = time
+
+
         d="dias"
         h="horas"
         m="minutos"
-        s="segundos"
+        #s="segundos"
 
         if(day == 1):
             d="dia"
@@ -114,11 +118,20 @@ class AnilistaRequest():
             h="hora"
         if(minutes== 1):
             m="minuto"
-        if(seconds == 1):
-            s="segundo"
+        #if(seconds == 1):
+        #    s="segundo"
 
-        striformat="%d "+d+", %d "+h+", %d "+m+", %d "+s+" "
-        return(striformat % (day, hour, minutes, seconds))
+
+        if(day == 0):
+            if(hour == 0):
+                if(minutes == 0):
+                    return("Ya sale!")
+                striformat="%d "+m+" "
+                return(striformat % (minutes))
+            striformat="%d "+h+", %d "+m+" "
+            return(striformat % (hour, minutes))
+        striformat="%d "+d+", %d "+h+", %d "+m+" "
+        return(striformat % (day, hour, minutes))
 
 
     def obtenerId(self, id):
@@ -138,15 +151,26 @@ class AnilistaRequest():
             return(response.content)
         else:
             return("none")
-    def obtenerLista(self):
+    def obtenerListaEnEmision(self):
         return self.listaSiguiendoElem
+    def obtenerListaOffSeason(self):
+        return self.listaSiguiendoOffSeason
     def obtenerDatosdeUsuario(self):
         return self.datosUsr
-    def actualizarLista(self):
+    def ordenarPorClave(self, elem):
+        return elem['tiemposalidaINTERGER']
+    def obtenerImagenReq(self,url):
+        response = requests.get(url)
+        if response.status_code == 200:
+            return(response.content)
+        else:
+            return("none")
+
+    def actualizarListas(self):
         self.listaSiguiendoElem.clear()
+        self.listaSiguiendoOffSeason.clear()
         # Define our query variables and values that will be used in the query request
         variables = {'userid':self.usrid}
-        print()
         url = 'https://graphql.anilist.co'     # Make the HTTP Api request
         response = requests.post(url, json={'query': query, 'variables': variables})
         response_json = json.loads(response.text)
@@ -160,18 +184,20 @@ class AnilistaRequest():
             anio=response_json['data']['Page']['mediaList'][ind]['media']['seasonYear']
             estado=response_json['data']['Page']['mediaList'][ind]['media']['status']
             episodios=response_json['data']['Page']['mediaList'][ind]['media']['episodes']
-            #print(response_json['data']['Page']['mediaList'][ind]['media']['coverImage']['medium'])
+            coverimg=response_json['data']['Page']['mediaList'][ind]['media']['coverImage']['medium']
             diayhora="NULL"
             capitulo="NULL"
             tiempohastasalida="NULL"
             progreso= response_json['data']['Page']['mediaList'][ind]['progress']
 
+            tiempohastasalidaInt=0
             if( len(response_json['data']['Page']['mediaList'][ind]['media']['airingSchedule']['nodes']) == 1):
                 tiempoepoch = response_json['data']['Page']['mediaList'][ind]['media']['airingSchedule']['nodes'][0]['airingAt']
                 diayhora=time.strftime('%d-%m-%Y %H:%M:%S', time.localtime(tiempoepoch))
                 capitulo= response_json['data']['Page']['mediaList'][ind]['media']['airingSchedule']['nodes'][0]['episode']
                 tiempohastasalida= response_json['data']['Page']['mediaList'][ind]['media']['airingSchedule']['nodes'][0]['timeUntilAiring']
-                tiempohastasalida= self.convertirtiempo(int(tiempohastasalida))
+                tiempohastasalidaInt=int(tiempohastasalida)
+                tiempohastasalida= self.convertirtiempo(tiempohastasalidaInt)
             ind+=1
             sublista={}
             sublista['titulo']=title
@@ -180,13 +206,19 @@ class AnilistaRequest():
             if(estado == 'RELEASING'):
                 sublista['estado']="SALIENDO"
             if(estado == 'FINISHED'):
-                sublista['estado']="TERMINADA"
+                sublista['estado']="FINALIZÓ"
             sublista['diahora']=diayhora
             sublista['capitulo']=capitulo
             sublista['tiemposalida']=tiempohastasalida
+            sublista['tiemposalidaINTERGER']=tiempohastasalidaInt
+            sublista['coverimg']=self.obtenerImagenReq(coverimg)
             if(episodios == None):
                 sublista['totepisodios']="?"
             else:
                 sublista['totepisodios']=episodios
             sublista['progreso']=progreso
-            self.listaSiguiendoElem.append(sublista)
+            if(sublista['estado'] != "FINALIZÓ"):
+                self.listaSiguiendoElem.append(sublista)
+            else:
+                self.listaSiguiendoOffSeason.append(sublista)
+        self.listaSiguiendoElem.sort(key=self.ordenarPorClave)

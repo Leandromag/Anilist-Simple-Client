@@ -29,91 +29,149 @@ class GtkInterface():
 		builder = Gtk.Builder()
 		builder.add_from_file("modules/GTKStructure/ventanaCliente.glade") #creo la interface Gtk
 
-		self.closebutton = builder.get_object("closebutton")	#activo evento cerrar ventana
-		self.closebutton.connect('clicked',self.cerrarGTK)
-
 		self.listbo = builder.get_object("listbo")
+		self.listbo2 = builder.get_object("listbo2")
 
 		anilistApi = AnilistReq.AnilistaRequest()
 		anilistApi.actualizar()
-		lista_anime=anilistApi.obtenerLista()
+		lista_anime_emision=anilistApi.obtenerListaEnEmision()
+		lista_anime_offseason=anilistApi.obtenerListaOffSeason()
 		datos_usr=anilistApi.obtenerDatosdeUsuario()
-		imgdata=anilistApi.obtenerAvatar()   #data byte img
 
+
+		imgdata=anilistApi.obtenerAvatar()   #data byte img
 		input_stream = Gio.MemoryInputStream.new_from_data(imgdata, None)
 		pixbuf = Pixbuf.new_from_stream(input_stream, None)
 		self.gtkimag = builder.get_object("avatar")
 		self.gtkimag.set_from_pixbuf(pixbuf)
 
+
 		self.labelprofilename = builder.get_object("labelprofilename")
 		self.labelprofilename.set_text(datos_usr['profilename'])
 
-		for elem in lista_anime:
+		self.scrollwin = builder.get_object("scrollwindow")
+		self.scrollwin.set_name("scrollwin")
+		self.scrollwin = builder.get_object("scrollwindow2")
+		self.scrollwin.set_name("scrollwin2")
+
+		corrimientovent=135
+
+		labelvistos = builder.get_object("total_cont")
+		labelvistos.set_text(str(datos_usr['vistos']))
+		labelepi = builder.get_object("episodios_cont")
+		labelepi.set_text(str(datos_usr['episodios']))
+		labeldias = builder.get_object("dias_cont")
+		labeldias.set_text(str(datos_usr['dias']))
+		labelsig = builder.get_object("siguiendo")
+		labelsig.set_text(str(len(lista_anime_emision)))
+		labelvie = builder.get_object("viendo")
+		labelvie.set_text(str(len(lista_anime_offseason)))
+
+
+		for elem in lista_anime_offseason:
+
+			input_stream = Gio.MemoryInputStream.new_from_data(elem['coverimg'], None)
+			pixbuf = Pixbuf.new_from_stream(input_stream, None)
+			gtkimag = Gtk.Image()
+			gtkimag.set_from_pixbuf(pixbuf)
 
 			contenedorenlista = Gtk.Fixed()
-			titulo = Gtk.Label()
-			titulo.set_text("Titulo:")
+
+			contenedorenlista.put(gtkimag,20,0)
 
 			titulo_content = Gtk.Label()
 			titulo_content.set_text(elem['titulo'])
 			titulo_content.set_name("labelama")
 
-			contenedorenlista.put(titulo,0,0)
-			contenedorenlista.put(titulo_content,60,0)
-
+			contenedorenlista.put(titulo_content,0+corrimientovent,0)
 
 			temporada = Gtk.Label()
 			temporada.set_text("Temporada:")
 
 			temporada_content = Gtk.Label()
-			temporada_content.set_text(elem['temporada'])
+			temporada_content.set_text(elem['temporada']+" "+str(elem['anio']))
 			temporada_content.set_name("labelblue")
 
-			contenedorenlista.put(temporada,0,20)
-			contenedorenlista.put(temporada_content,85,20)
+			contenedorenlista.put(temporada,0+corrimientovent,20)
+			contenedorenlista.put(temporada_content,85+corrimientovent,20)
 
-
-			estado = Gtk.Label()
-			estado.set_text("Estado:")
-
-			estado_content = Gtk.Label()
-			estado_content.set_text(elem['estado'])
-			estado_content.set_name("labelverd")
-
-			contenedorenlista.put(estado,160,20)
-			contenedorenlista.put(estado_content,220,20)
 
 			progreso = Gtk.Label()
 			progreso.set_text("Progreso:")
 
 			progreso_content = Gtk.Label()
 			progreso_content.set_text("["+str(elem['progreso'])+"/"+str(elem['totepisodios'])+"]")
-			progreso_content.set_name("labelred")
+			progreso_content.set_name("labelverd")
 
-			contenedorenlista.put(progreso,350,20)
-			contenedorenlista.put(progreso_content,420,20)
+			contenedorenlista.put(progreso,0+corrimientovent,40)
+			contenedorenlista.put(progreso_content,80+corrimientovent,40)
+
+
+			self.listbo2.add(contenedorenlista)
+
+		for elem in lista_anime_emision:
+
+			input_stream = Gio.MemoryInputStream.new_from_data(elem['coverimg'], None)
+			pixbuf = Pixbuf.new_from_stream(input_stream, None)
+			gtkimag = Gtk.Image()
+			gtkimag.set_from_pixbuf(pixbuf)
+
+			contenedorenlista = Gtk.Fixed()
+
+			contenedorenlista.put(gtkimag,20,0)
+
+			titulo = Gtk.Label()
+
+			titulo_content = Gtk.Label()
+			titulo_content.set_text(elem['titulo'])
+			titulo_content.set_name("labelama")
+
+			contenedorenlista.put(titulo_content,0+corrimientovent,0)
+
+
+			temporada = Gtk.Label()
+			temporada.set_text("Temporada:")
+
+			temporada_content = Gtk.Label()
+			temporada_content.set_text(elem['temporada']+" "+str(elem['anio']))
+			temporada_content.set_name("labelblue")
+
+			contenedorenlista.put(temporada,0+corrimientovent,20)
+			contenedorenlista.put(temporada_content,85+corrimientovent,20)
+
+
+			progreso = Gtk.Label()
+			progreso.set_text("Progreso:")
+
+			progreso_content = Gtk.Label()
+			progreso_content.set_text("["+str(elem['progreso'])+"/"+str(elem['totepisodios'])+"]")
+			progreso_content.set_name("labelverd")
+
+			contenedorenlista.put(progreso,0+corrimientovent,40)
+			contenedorenlista.put(progreso_content,80+corrimientovent,40)
 
 
 			proximo = Gtk.Label()
-			proximo.set_text("Episodio: ")
+			proximo.set_text("Episodio")
 
 			proximo_content = Gtk.Label()
-			proximo_content.set_text("#"+str(elem['capitulo']))
+			proximo_content.set_text(str(elem['capitulo']))
 			proximo_content.set_name("labelros")
 
-			contenedorenlista.put(proximo,0,40)
-			contenedorenlista.put(proximo_content,70,40)
+			contenedorenlista.put(proximo,0+corrimientovent,60)
+			contenedorenlista.put(proximo_content,65+corrimientovent,60)
 
-
+			largo=len(str(elem['capitulo']))
+			corrimiento=0+(10*(largo-1))
 			proximo2 = Gtk.Label()
-			proximo2.set_text("Sale en ->")
+			proximo2.set_text("sale en")
 
 			proximo_content2 = Gtk.Label()
 			proximo_content2.set_text(elem['tiemposalida'])
 			proximo_content2.set_name("labelros")
 
-			contenedorenlista.put(proximo2,120,40)
-			contenedorenlista.put(proximo_content2,200,40)
+			contenedorenlista.put(proximo2,80+corrimiento+corrimientovent,60)
+			contenedorenlista.put(proximo_content2,135+corrimiento+corrimientovent,60)
 
 			self.listbo.add(contenedorenlista)
 
@@ -121,6 +179,7 @@ class GtkInterface():
 		self.cargarcss()
 		self.window = builder.get_object("window") #muestro la ventana
 		self.window.set_name("ventana")
+		self.window.connect("destroy",self.cerrarGTK)
 		self.window.show_all()
 		self.iniciar()
 
@@ -217,6 +276,17 @@ class GtkInterface():
 		}
 		#ventana {
 			background-color: #19212d;
+		}
+		#scrollwin {
+			border-top-width:0px;
+			border-bottom-width:0px;
+			background-color: #111721;
+		}
+		#scrollwin2 {
+			border-top-width:0px;
+			border-bottom-width:0px;
+			background-color: #111721;
+			margin-right:20px;
 		}
 		"""
 
